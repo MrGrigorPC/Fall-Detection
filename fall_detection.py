@@ -1,10 +1,10 @@
 import numpy as np
 
-skeleton_1 = np.load('./data/skeleton_1.npy')
+skeleton_1 = np.load('./data/skeleton_3.npy')
 
 
 class FallDetecion:
-    def __init__(self):
+    def __init__(self,fps=18):
         self.torso_up = np.array(
             [5, 6]
         )  # The slice used for generating the midpoint of the shoulders
@@ -38,6 +38,8 @@ class FallDetecion:
             [[1, 1], [1, 100]]
         )  # A vertical vector for comparing with other vectors
 
+        self.fps = fps
+
     def angleCalculation(self, vectors):
         """
         Used to calculate the angles between given pairs of vectors
@@ -56,6 +58,7 @@ class FallDetecion:
         norm = np.prod(
             np.linalg.norm(difference[:, :, :, :], axis=3), axis=-1
         )  # Calculates the norm of the vectors and multiplies them, same as |a|*|b|
+        print(norm.shape)
 
         cos_angle = np.divide(dot, norm)  # cos(x) = dot(a,b)/|a|*|b|
 
@@ -63,7 +66,7 @@ class FallDetecion:
                 np.arccos(cos_angle) * 180 / np.pi
         )  # Take arccos of the result to get the angle
 
-        angle = angle.reshape(-1, 1)  # Correct the shape of the output
+        angle = angle.reshape(-1, 8, 1)  # Correct the shape of the output
 
         return angle
 
@@ -76,11 +79,10 @@ class FallDetecion:
 
         keypoints[keypoints < 0] = np.nan
         # Handle missing values
-        torso_up = keypoints[:, self.torso_up].mean(axis=1)[:, np.newaxis]
-
-        torso_down = keypoints[:, self.torso_down].mean(axis=1)[:, np.newaxis]
-        head_coordinate = np.nanmean(keypoints[:, :5], axis=1)[:, np.newaxis]
-        vertical = np.tile(self.vertical_coordinates, (keypoints.shape[0], 1, 1))
+        torso_up = keypoints[:, self.torso_up].mean(axis=1)[:, np.newaxis] # Getting middle point of torso down and adding new axis for further concatenation
+        torso_down = keypoints[:, self.torso_down].mean(axis=1)[:, np.newaxis] # Getting middle point of torso up and adding new axis for further concatenation
+        head_coordinate = np.nanmean(keypoints[:, :5], axis=1)[:, np.newaxis] # Getting mean value of head coordinate and adding new axis for further concatenation
+        vertical = np.tile(self.vertical_coordinates, (keypoints.shape[0], 1, 1)) # Numpy broadcasting for further concatenation
         keypoints = np.concatenate((
             keypoints,
             torso_up,
@@ -91,15 +93,30 @@ class FallDetecion:
         return keypoints
 
     def __call__(self, skeleton):
-        cache = []
-        # keypoints = self.collectData(skeleton) # Handle missing values and add extra ones for frames
-        # vector_pairs = np.array(keypoints[:, self.vector_indices, self.pair_indices])
-        # vector_angles = self.angleCalculation(vector_pairs)
-        # print(vector_angles)
+        '''
+            This __call__ function takes a cache of skeletons as input, with a shape of (M x 17 x 2), where M represents the number of skeletons.
+            The value of M is constant and represents time. For example, if you have a 7 fps stream and M is equal to 7 (M = 7), it means that the cache length is 1 second.
+            The number 17 represents the count of points in each skeleton (as shown in skeleton.png), and 2 represents the (x, y) coordinates.
+
+            This function uses the cache to detect falls.
+
+            The function will return:
+                - bool: isFall (True or False)
+                - float: fallScore
+        '''
+
+
+        isFall = False
         keypoints = self.collectData(skeleton)
-        print(keypoints.shape)
         vector_pairs = keypoints[:, self.vector_indices][:, self.pair_indices]
         angles = self.angleCalculation(vector_pairs)
-        print(angles.shape)
+        for i in range(len(angles)-27):
+            fallScore = np.nanmean(np.abs(np.diff(angles[i:i+26], axis=0)) * self.fps) # Making prediction using 27 frames(1.5 sec)
+            if fallScore > 125:
+                isFall = True
+                return isFall, fallScore
+        return isFall, fallScore
+
+
 obj = FallDetecion()
-obj(skeleton_1)
+print(obj(skeleton_1))
