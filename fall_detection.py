@@ -15,18 +15,18 @@ class FallDetecion:
 
         self.vector_indices = np.array(
             [
-                [19, 17],
-                [19, 18],
-                [6, 12],
-                [5, 11],
-                [6, 8],
-                [5, 7],
-                [12, 14],
-                [11, 13],
-                [11, 12],
-                [13, 15],
-                [14, 16],
-                [20, 21],
+                [19, 17], #0 Vector between head upper tors mid point
+                [19, 18], #1 Vector between upper and lower tors mid points
+                [6, 12], #2 Vector between left shoulder and left hip
+                [5, 11], #3 Vector between right shoulder and right hip
+                [6, 8], #4 Vector between left shoulder and left elbow
+                [5, 7], #5 Vector between right shoulder and right elbow
+                [12, 14], #6 Vector between left hip and left knee
+                [11, 13], #7 Vector between right hip and right knee
+                [11, 12], #8 Vector of hip
+                [13, 15], #9 Vector between right knee and foot
+                [14, 16], #10 Vector between left knee and foot
+                [20, 21], #11 Vertical vector
             ]
         )  # Vectors to be considered for calculating angles
 
@@ -120,4 +120,4 @@ class FallDetecion:
 
 
 obj = FallDetecion()
-print(obj(skeleton_1))
+print(obj(skeleton_1))``
